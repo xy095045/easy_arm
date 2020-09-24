@@ -98,10 +98,6 @@ void detect(vector<vector<float>> &boxes, const float* lOutput,
 }
 
 /**************************************
-comment: 鏂扮増鏈琋MS锛� 1銆佷笉鍦∟MS閲岄潰纭畾class id锛岃€屾槸鍦╠etect()涓凡缁忕‘瀹氬ソ \
-                        锛坉etect杩斿洖鐨刡oxes鐨勬暟閲忔瘮鍘熸潵鐨勪細鍑忓皯锛�
-                    2銆佷笉闇€瑕佸仛sort鎺掑簭
-
 Parammeter: 
             1.boxes: all detection objects
             2.classes: classes number(unuse in this version)

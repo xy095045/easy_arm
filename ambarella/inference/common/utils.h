@@ -14,10 +14,17 @@
 #include <thread>
 #include <mutex>
 #include <future>
-#include <opencv2/opencv.hpp>
+
+// add max and min to math
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
 
 unsigned long get_current_time(void);
+
 void ListPath(std::string const &path, std::vector<std::string> &paths);
+
 void ListImages(std::string const &path, std::vector<std::string> &images);
 
-#endif
+#endif //__UTILS_H__

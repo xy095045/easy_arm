@@ -42,7 +42,7 @@ void ListPath(std::string const &path, std::vector<std::string> &paths) {
             #if(YUV420OPEN)
             if((strcmp(name.c_str(), "yuv")==0))
             {
-                cout << "Dir name: "<<name<<endl;
+                std::cout << "Dir name: "<<name<<std::endl;
                 paths.push_back(name);  
             }
             #else
