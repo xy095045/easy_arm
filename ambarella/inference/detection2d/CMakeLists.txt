@@ -11,7 +11,10 @@ file(GLOB COMMON_SRCS
 
 add_executable(detnet_test detnet_test.cpp yolov3.cpp ${COMMON_SRCS})
 target_link_libraries(detnet_test 
-                      ${OpenCV_LIBS} 
+                      opencv_core
+                      opencv_imgcodecs
+                      opencv_imgproc
+                      opencv_highgui
                       jpeg
                       png
                       z

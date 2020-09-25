@@ -1,12 +1,13 @@
 #ifndef COMMONLOG_H
 #define COMMONLOG_H
 
+#include <stdio.h>
 /**
  * @brief submodule to log
  *
  */
 
-int gsc_log_level;
+extern int gsc_log_level;
 
 enum LogLevel {
     LogLevel_None = 0x00,
@@ -16,10 +17,7 @@ enum LogLevel {
     LogLevel_Verbose = 0x04,
 };
 
-void set_log_level(enum LogLevel level)
-{
-    gsc_log_level = level;
-}
+void set_log_level(enum LogLevel level);
 
 #define DASSERT(expr) do { \
 	if (!(expr)) { \

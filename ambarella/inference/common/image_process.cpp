@@ -17,13 +17,14 @@ void preprocess(nnctrl_ctx_t *nnctrl_ctx, const cv::Mat &src_mat,
         cv::resize(src_mat, dst_mat, dst_size, 0, 0, cv::INTER_NEAREST);
     }
     else if(resize_type == 1){
-        image_resize_square(src_mat, dst_mat, dst_size);
+        image_resize_square(src_mat, dst_size, dst_mat);
     }
     
     cv::split(dst_mat, channel_s);
     for (int i=0; i<3; i++)
     {
-        memcpy(nnctrl_ctx->net.net_in.in_desc[0].virt + i * height * width, channel_s[2-i].data, height * width); // bgr2rgb
+        memcpy(nnctrl_ctx->net.net_in.in_desc[0].virt + i * dst_size.height * dst_size.width, \
+         channel_s[2-i].data, dst_size.height * dst_size.width); // bgr2rgb
     }
     
     // sycn address

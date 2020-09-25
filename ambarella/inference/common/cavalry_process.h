@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "cavalry_ioctl.h"
 #include "cavalry_mem.h"

@@ -2,10 +2,8 @@
   The following source code derives from Darknet
 */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-
-#include <opencv2/opencv.hpp>
+#ifndef YOLOV3_H__
+#define YOLOV3_H__
 
 #include <algorithm>
 #include <iomanip>
@@ -58,4 +56,4 @@ void detect(std::vector<std::vector<float>> &boxes, const float* lOutput, \
 std::vector<std::vector<float>> applyNMS(std::vector<std::vector<float>>& boxes,
 							                           const float thres, bool sign_nms=true);
 
-#endif  //__UTILS_H__
+#endif  //YOLOV3_H__

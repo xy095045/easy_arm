@@ -11,7 +11,10 @@ file(GLOB COMMON_SRCS
 
 add_executable(classnet_test classnet_test.cpp  ${COMMON_SRCS})
 target_link_libraries(classnet_test 
-                      ${OpenCV_LIBS} 
+                      opencv_core
+                      opencv_imgcodecs
+                      opencv_imgproc
+                      opencv_highgui 
                       jpeg
                       png
                       z

@@ -33,12 +33,12 @@ link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/zlib/usr/lib)
 link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/freetype/usr/lib)
 
 #opencv
-set(OpenCV_DIR ${AMBARELLA_DIR}/prebuild/third-party/armv8-a/opencv/usr/lib/OpenCV)
-find_package(OpenCV REQUIRED CONFIG)
-message(STATUS "Found OpenCV ${OpenCV_VERSION}")
-message(STATUS "${OpenCV_INCLUDE_DIRS}, ${OpenCV_LIBS}")
-include_directories(${OpenCV_INCLUDE_DIRS})
-link_directories(${OpenCV_LIBS})
+#set(OpenCV_DIR ${AMBARELLA_DIR}/prebuild/third-party/armv8-a/opencv/usr/lib/OpenCV)
+#find_package(OpenCV REQUIRED CONFIG)
+#message(STATUS "Found OpenCV ${OpenCV_VERSION}")
+#message(STATUS "${OpenCV_INCLUDE_DIRS}, ${OpenCV_LIBS}")
+include_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/opencv/include)
+link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/opencv/usr/lib)
 
 OPTION(USE_OpenMP "Use OpenMP" ON)
 IF(USE_OpenMP)

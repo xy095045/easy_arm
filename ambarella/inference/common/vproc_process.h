@@ -4,10 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <iostream>
 
 #include "vproc.h"
 
 #include "inference/common/common_log.h"
+#include "inference/common/cavalry_process.h"
 
 /**
  * @brief submodule to operate on vproc lib

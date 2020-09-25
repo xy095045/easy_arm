@@ -38,11 +38,10 @@ int init_net_context(nnctrl_ctx_t *nnctrl_ctx,
 void deinit_net_context(nnctrl_ctx_t *nnctrl_ctx, cavalry_ctx_t *cavalry_ctx){
     unsigned long size;
     unsigned long phy_addr;
-    if (nnctrl_ctx->net.net_m.virt_addr && nnctrl_ctx->PNet[id].net_m.mem_size) {
+    if (nnctrl_ctx->net.net_m.virt_addr && nnctrl_ctx->net.net_m.mem_size) {
         size = nnctrl_ctx->net.net_m.mem_size;
         phy_addr = nnctrl_ctx->net.net_m.phy_addr;
-        if (cavalry_mem_free(size, phy_addr,
-                            nnctrl_ctx->net[id].net_m.virt_addr) < 0) {
+        if (cavalry_mem_free(size, phy_addr, nnctrl_ctx->net.net_m.virt_addr) < 0) {
                 DPRINT_NOTICE("cavalry_mem_free failed\n");
             }
     }

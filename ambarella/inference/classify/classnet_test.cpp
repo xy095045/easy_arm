@@ -23,6 +23,7 @@
 #include <sstream>
 
 #include "inference/common/utils.h"
+#include "inference/common/blob_define.h"
 #include "inference/common/vproc_process.h"
 #include "inference/common/net_process.h"
 #include "inference/common/image_process.h"
@@ -30,7 +31,7 @@
 #define CLASS_NUM (100)
 
 const static int g_canvas_id = 1;
-const static char *net_in_name = '0';
+const static char *net_in_name = "0";
 const static char *net_out_name = "192";
 
 
@@ -43,11 +44,11 @@ typedef struct classnet_ctx_s {
 
 static void set_net_io(nnctrl_ctx_t *nnctrl_ctx){
 	nnctrl_ctx->net.net_in.in_num = 1;
-    strcpy(nnctrl_ctx->net.net_in.in_desc[0].name, net_in_name);
+    nnctrl_ctx->net.net_in.in_desc[0].name = net_in_name;
 	nnctrl_ctx->net.net_in.in_desc[0].no_mem = 0;
 
 	nnctrl_ctx->net.net_out.out_num = 1;
-    strcpy(nnctrl_ctx->net.net_out.out_desc[0].name, net_out_name); 
+    nnctrl_ctx->net.net_out.out_desc[0].name = net_out_name; 
 	nnctrl_ctx->net.net_out.out_desc[0].no_mem = 0; // let nnctrl lib allocate memory for output
 }
 
@@ -140,13 +141,14 @@ void image_dir_infer(const std::string &image_dir){
     float output[CLASS_NUM];
     int class_idx = -1;
     memset(&classify_ctx, 0, sizeof(classnet_ctx_s));
-    rval = init_param(&classify_ctx);
-    rval = classnet_init(&classify_ctx);
+    init_param(&classify_ctx);
+    classnet_init(&classify_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    int height = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;
+    int width = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.width;
     // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
     cv::Size dst_size = cv::Size(width, height);
+    cv::Mat src_img;
     ListImages(image_dir, images);
     std::cout << "total Test images : " << images.size() << std::endl;
     save_result.open("./cls_result.txt");
@@ -154,7 +156,7 @@ void image_dir_infer(const std::string &image_dir){
 		std::stringstream temp_str;
         temp_str << image_dir << images[index];
 		std::cout << temp_str.str() << std::endl;
-		img = cv::imread(temp_str.str());
+		src_img = cv::imread(temp_str.str());
         time_start = get_current_time();
         preprocess(&classify_ctx.nnctrl_ctx, src_img, dst_size, 0);
         classnet_run(&classify_ctx, output);
@@ -188,17 +190,17 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     init_param(&classify_ctx);
     classnet_init(&classify_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    int height = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;
+    int width = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.width;
     // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
     cv::Size dst_size = cv::Size(width, height);
     save_result.open("./cls_result.txt");
-    while(std::getline(infile, line_data)){
+    while(std::getline(read_txt, line_data)){
         if(line_data.empty()){
             continue;
         }
         size_t index = line_data.find_first_of(' ', 0);
-        std::string image_name = ine_data.substr(0, index);
+        std::string image_name = line_data.substr(0, index);
         std::stringstream image_path;
         image_path << image_dir << image_name;
         std::cout << image_path.str() << std::endl;
