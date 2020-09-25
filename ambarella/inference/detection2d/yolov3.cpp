@@ -2,7 +2,7 @@
   The following source code derives from Darknet
 */
 
-#include "yolov3.h"
+#include "inference/detection2d/yolov3.h"
 
 #define IDX(o) (entry_index(o,c,w,h,lWidth,lHeight))
 
@@ -24,7 +24,7 @@ float overlap(float x1, float w1, float x2, float w2)
     return right - left;
 }
 
-float cal_iou(vector<float> box, vector<float>truth)
+float cal_iou(std::vector<float> box, std::vector<float>truth)
 {
     float w = overlap(box[0], box[2], truth[0], truth[2]);
     float h = overlap(box[1], box[3], truth[1], truth[3]);
@@ -47,10 +47,10 @@ Parammeter:
             5.sHeight,sWidth: yolo net input height, width
 Return: 
 **************************************/
-void detect(vector<vector<float>> &boxes, const float* lOutput,
-                int lHeight, int lWidth, int num, int sHeight, int sWidth) 
+void detect(std::vector<std::vector<float>> &boxes, const float* lOutput,
+            int lHeight, int lWidth, int num, int sHeight, int sWidth) 
 {
-    vector<float> box;
+    std::vector<float> box;
 	float max;
     int cls = 0;
     for (int h = 0; h < lHeight; ++h) {
@@ -106,11 +106,11 @@ Parammeter:
 
 Return: detection objects after nms
 **************************************/
-vector<vector<float>> applyNMS(vector<vector<float>>& boxes,
+std::vector<std::vector<float>> applyNMS(std::vector<std::vector<float>>& boxes,
 	                                    const float thres, bool sign_nms) 
 {    
-    vector<vector<float>> result;
-    vector<bool> exist_box(boxes.size(), true);
+    std::vector<std::vector<float>> result;
+    std::vector<bool> exist_box(boxes.size(), true);
 
     int n = 0;
     for (size_t _i = 0; _i < boxes.size(); ++_i) 
@@ -158,9 +158,9 @@ Parammeter:
 
 Return: detection objects
 **************************************/
-vector<vector<float>> yolo_run(float* node0, float* node1, float* node2, int img_h, int img_w)
+std::vector<std::vector<float>> yolo_run(float* node0, float* node1, float* node2, int img_h, int img_w)
 {
-    vector<vector<float>> boxes;
+    std::vector<std::vector<float>> boxes;
 
     detect(boxes, node0, g_layer0_h, g_layer0_w, 2, YOLO_NET_IN_HEIGHT, YOLO_NET_IN_WIDTH);
     detect(boxes, node1, g_layer1_h, g_layer1_w, 1, YOLO_NET_IN_HEIGHT, YOLO_NET_IN_WIDTH);

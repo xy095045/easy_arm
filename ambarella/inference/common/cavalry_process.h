@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <fcntl.h>
 
 #include "cavalry_ioctl.h"
 #include "cavalry_mem.h"

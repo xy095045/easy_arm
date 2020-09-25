@@ -22,11 +22,10 @@
 
 #include <sstream>
 
-#include "opencv2/opencv.hpp"
-
 #include "inference/common/utils.h"
 #include "inference/common/vproc_process.h"
 #include "inference/common/net_process.h"
+#include "inference/common/image_process.h"
 
 #define CLASS_NUM (100)
 
@@ -120,32 +119,6 @@ int classnet_run(classnet_ctx_s *classify_ctx, float *output)
     return rval;
 }
 
-void preprocess(classnet_ctx_s *classify_ctx, cv::Mat &srcRoI)
-{
-    nnctrl_ctx_t *nnctrl_ctx = &classify_ctx->nnctrl_ctx;
-
-    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = nnctrl_ctx->net.net_in.in_desc[0].dim.width;
-    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
-
-    cv::Size szNet = cv::Size(width, height);
-    cv::Mat detRoI = srcRoI;
-
-    cv::resize(detRoI, detRoI, szNet, 0, 0); //cv::INTER_LINEAR
-
-    std::vector<cv::Mat> channel_s;
-    cv::split(detRoI, channel_s);
-
-    for (int i=0; i<3; i++)
-    {
-        memcpy(nnctrl_ctx->net.net_in.in_desc[0].virt + i * height * width, channel_s[2-i].data, height * width); // bgr2rgb
-    }
-    
-    // sycn address
-    cavalry_mem_sync_cache(nnctrl_ctx->net.net_in.in_desc[0].size, nnctrl_ctx->net.net_in.in_desc[0].addr, 1, 0);
-}
-
 int postprocess(const float *output)
 {
     float id_max = -100;
@@ -160,6 +133,7 @@ int postprocess(const float *output)
 }
 
 void image_dir_infer(const std::string &image_dir){
+    unsigned long time_start, time_end;
     classnet_ctx_s classify_ctx;
     std::vector<std::string> images;
     std::ofstream save_result;
@@ -168,6 +142,11 @@ void image_dir_infer(const std::string &image_dir){
     memset(&classify_ctx, 0, sizeof(classnet_ctx_s));
     rval = init_param(&classify_ctx);
     rval = classnet_init(&classify_ctx);
+    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
+    int height = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
+    int width = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
+    cv::Size dst_size = cv::Size(width, height);
     ListImages(image_dir, images);
     std::cout << "total Test images : " << images.size() << std::endl;
     save_result.open("./cls_result.txt");
@@ -177,7 +156,7 @@ void image_dir_infer(const std::string &image_dir){
 		std::cout << temp_str.str() << std::endl;
 		img = cv::imread(temp_str.str());
         time_start = get_current_time();
-        preprocess(&classify_ctx, src_img);
+        preprocess(&classify_ctx.nnctrl_ctx, src_img, dst_size, 0);
         classnet_run(&classify_ctx, output);
         class_idx = postprocess(output);
         time_end = get_current_time();
@@ -190,13 +169,14 @@ void image_dir_infer(const std::string &image_dir){
 }
 
 void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
+    unsigned long time_start, time_end;
     classnet_ctx_s classify_ctx;
-    std::vector<std::string> images;
     std::ofstream save_result;
     std::ifstream read_txt;
     float output[CLASS_NUM];
     int class_idx = -1;
     std::string line_data;
+    cv::Mat src_img;
 
     read_txt.open(image_txt_path.data());
     if(!read_txt.is_open()){
@@ -207,6 +187,11 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     memset(&classify_ctx, 0, sizeof(classnet_ctx_s));
     init_param(&classify_ctx);
     classnet_init(&classify_ctx);
+    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
+    int height = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
+    int width = classify_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
+    cv::Size dst_size = cv::Size(width, height);
     save_result.open("./cls_result.txt");
     while(std::getline(infile, line_data)){
         if(line_data.empty()){
@@ -217,9 +202,9 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
         std::stringstream image_path;
         image_path << image_dir << image_name;
         std::cout << image_path.str() << std::endl;
-        img = cv::imread(image_path.str());
+        src_img = cv::imread(image_path.str());
         time_start = get_current_time();
-        preprocess(&classify_ctx, src_img);
+        preprocess(&classify_ctx.nnctrl_ctx, src_img, dst_size, 0);
         classnet_run(&classify_ctx, output);
         class_idx = postprocess(output);
         time_end = get_current_time();

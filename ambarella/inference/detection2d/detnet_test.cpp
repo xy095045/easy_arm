@@ -20,7 +20,7 @@
 #include <getopt.h>
 #include <dirent.h>
 
-#include "opencv2/opencv.hpp"
+#include <sstream>
 
 #include "inference/common/utils.h"
 #include "inference/common/vproc_process.h"
@@ -134,38 +134,12 @@ int det2d_run(det2d_ctx_t *det2d_ctx, float *output[OUTPUT_NUM])
     return rval;
 }
 
-void preprocess(det2d_ctx_t *det2d_ctx, cv::Mat &srcRoI)
+std::vector<std::vector<float>> postprocess(det2d_ctx_t *det2d_ctx, const cv::Size dst_size, float *output[OUTPUT_NUM])
 {
     nnctrl_ctx_t *nnctrl_ctx = &det2d_ctx->nnctrl_ctx;
 
-    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = nnctrl_ctx->net.net_in.in_desc[0].dim.width;
-    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
-
-    cv::Size szNet = cv::Size(width, height);
-    cv::Mat detRoI = srcRoI;
-
-    cv::resize(detRoI, detRoI, szNet, 0, 0); //cv::INTER_LINEAR
-
-    std::vector<cv::Mat> channel_s;
-    cv::split(detRoI, channel_s);
-
-    for (int i=0; i<3; i++)
-    {
-        memcpy(nnctrl_ctx->net.net_in.in_desc[0].virt + i * height * width, channel_s[2-i].data, height * width); // bgr2rgb
-    }
-    
-    // sycn address
-    cavalry_mem_sync_cache(nnctrl_ctx->net.net_in.in_desc[0].size, nnctrl_ctx->net.net_in.in_desc[0].addr, 1, 0);
-}
-
-std::vector<std::vector<float>> postprocess(det2d_ctx_t *det2d_ctx, float *output[OUTPUT_NUM], cv::Mat &srcRoI)
-{
-    nnctrl_ctx_t *nnctrl_ctx = &det2d_ctx->nnctrl_ctx;
-
-    int img_h = srcRoI.rows;
-    int img_w = srcRoI.cols;
+    int img_h = dst_size.height;
+    int img_w = dst_size.width;
 
     std::vector<std::vector<float>> final_results;
 	final_results = yolo_run(output[0], output[1], output[2], img_h, img_w);
@@ -175,13 +149,13 @@ std::vector<std::vector<float>> postprocess(det2d_ctx_t *det2d_ctx, float *outpu
 }
 
 void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
+    unsigned long time_start, time_end;
     det2d_ctx_t det2d_ctx;
-    std::vector<std::string> images;
     std::vector<std::vector<float>> boxes;
     std::ofstream save_result;
     std::ifstream read_txt;
-    int class_idx = -1;
     std::string line_data;
+    cv::Mat src_image;
 
     read_txt.open(image_txt_path.data());
     if(!read_txt.is_open()){
@@ -192,7 +166,12 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     memset(&det2d_ctx, 0, sizeof(det2d_ctx_t));
     init_param(&det2d_ctx);
     det2d_init(&det2d_ctx);
-    save_result.open("./cls_result.txt");
+    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
+    int height = det2d_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
+    int width = det2d_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
+    cv::Size dst_size = cv::Size(width, height);
+    save_result.open("./det2d_result.txt");
     while(std::getline(infile, line_data)){
         boxes.clear();
         if(line_data.empty()){
@@ -203,11 +182,11 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
         std::stringstream image_path;
         image_path << image_dir << image_name;
         std::cout << image_path.str() << std::endl;
-        img = cv::imread(image_path.str());
+        src_image = cv::imread(image_path.str());
         time_start = get_current_time();
-        preprocess(&det2d_ctx, src_img);
+        preprocess(&det2d_ctx.nnctrl_ctx, src_image, dst_size, 1);
         det2d_run(&det2d_ctx, output);
-        boxes = postprocess(output, src_img);
+        boxes = postprocess(output, src_image);
         time_end = get_current_time();
         std::cout << "det2d cost time: " <<  (time_end - time_start)/1000.0  << "ms" << std::endl;
 
@@ -233,7 +212,9 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
 int main()
 {
     std::cout << "start..." << std::endl;
-
+    const std::string image_dir = "";
+    const std::string image_txt_path = "";
+    image_txt_infer(image_dir, image_txt_path);
     std::cout << "End of game!!!" << std::endl;
     return 0;
 }

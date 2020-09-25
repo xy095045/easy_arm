@@ -20,11 +20,12 @@
 #include <getopt.h>
 #include <dirent.h>
 
-#include "opencv2/opencv.hpp"
+#include <sstream>
 
 #include "inference/common/utils.h"
 #include "inference/common/vproc_process.h"
 #include "inference/common/net_process.h"
+#include "inference/common/image_process.h"
 
 #define SEGMENT_NUM (200000)
 #define SegOutputWidth 500
@@ -122,44 +123,18 @@ int segment_run(seg_ctx_t *seg_ctx, float *output)
     std::cout << "poutput size: " << "--output_c: " << output_c << "--output_h: " << output_h << "--output_w: " \
                                   << output_w << "--output_p: " << output_p << "--" << std::endl;
 
-    float seg_output[SegOutputHeight * 504];
-    memcpy(seg_output, score_addr, SegOutputHeight * 504 * sizeof(float));
+    
+    memcpy(output, score_addr, SegOutputHeight * 504 * sizeof(float));
 
     for (int h = 0; h < output_h; h++)
     {
-        memcpy(output + h * output_w, seg_output + h * 504, output_w * sizeof(float));
+        memcpy(output + h * output_w, output + h * 504, output_w * sizeof(float));
     }
 
     return rval;
 }
 
-void preprocess(seg_ctx_t *seg_ctx, cv::Mat &srcRoI)
-{
-    nnctrl_ctx_t *nnctrl_ctx = &seg_ctx->nnctrl_ctx;
-
-    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = nnctrl_ctx->net.net_in.in_desc[0].dim.width;
-    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
-
-    cv::Size szNet = cv::Size(width, height);
-    cv::Mat detRoI = srcRoI;
-
-    cv::resize(detRoI, detRoI, szNet, 0, 0); //cv::INTER_LINEAR
-
-    std::vector<cv::Mat> channel_s;
-    cv::split(detRoI, channel_s);
-
-    for (int i=0; i<3; i++)
-    {
-        memcpy(nnctrl_ctx->net.net_in.in_desc[0].virt + i * height * width, channel_s[2-i].data, height * width); // bgr2rgb
-    }
-    
-    // sycn address
-    cavalry_mem_sync_cache(nnctrl_ctx->net.net_in.in_desc[0].size, nnctrl_ctx->net.net_in.in_desc[0].addr, 1, 0);
-}
-
-void postprocess(float* output, cv::Mat seg_mat)
+void postprocess(const float* output, const int flag, cv::Mat &seg_mat)
 {
     uint8_t colorB[] = {0, 0};
     uint8_t colorG[] = {0, 0};
@@ -175,75 +150,75 @@ void postprocess(float* output, cv::Mat seg_mat)
             else {
                 posit = 0;
             }
-            // int i = row * SegOutputWidth * SegOutputChannel + col * SegOutputChannel;
-            // auto max_ind = std::max_element(output + i, output + i + SegOutputChannel);
-            // uint8_t posit = (uint8_t)std::distance(output + i, max_ind);
-            seg_mat.at<cv::Vec3b>(row, col) = cv::Vec3b(colorB[posit], colorG[posit], colorR[posit]);
+            if(flag == 0){
+                seg_mat.at<cv::Vec3b>(row, col) = cv::Vec3b(posit, posit, posit);
+            }
+            else if (flag == 1){
+                seg_mat.at<cv::Vec3b>(row, col) = cv::Vec3b(colorB[posit], colorG[posit], colorR[posit]);
+            }
         }
     }
 }
 
-void predict_segnet(mtcnn_ctx_t *mtcnn_ctx, cv::Mat &src_img, int img_idx)
-{
-    int rval = 0;
+void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
+    const std::string save_result_dir = "./seg_result/"
+    unsigned long time_start, time_end;
+    seg_ctx_t seg_ctx;
+    std::vector<std::vector<float>> boxes;
+    std::ifstream read_txt;
+    std::string line_data;
+    cv::Mat src_image;
 
-    // preprocess input to the network
-    preprocess(mtcnn_ctx, src_img, eSegNet);
-    std::cout << "4-----model preprocess done!!!" << std::endl;
-
-    rval = nnctrl_run_segnet(mtcnn_ctx);
-    std::cout << "5-----model run done!!!" << std::endl; 
-
-    cv::Mat seg_mat(SegOutputHeight, SegOutputWidth, CV_8UC3);
-    postprocess(mtcnn_ctx, seg_mat);
-    std::cout << "6-----model postprocess done!!!" << std::endl; 
-
-	std::stringstream index;
-	index << img_idx;
-
-    for (int i = 0; i < seg_mat.rows * seg_mat.cols * 3; i++) {
-      src_img.data[i] = src_img.data[i] * 0.4 + seg_mat.data[i] * 0.6;
+    read_txt.open(image_txt_path.data());
+    if(!read_txt.is_open()){
+        std::cout << image_txt_path << " not exits" << std::endl;
+        return;
     }
+    
+    memset(&seg_ctx, 0, sizeof(seg_ctx_t));
+    init_param(&seg_ctx);
+    segment_init(&seg_ctx);
+    // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
+    int height = seg_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
+    int width = seg_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
+    cv::Size dst_size = cv::Size(width, height);
+    float seg_output[SegOutputHeight * 504];
+    cv::Mat seg_mat(SegOutputHeight, SegOutputWidth, CV_8UC3);
+    while(std::getline(infile, line_data)){
+        boxes.clear();
+        if(line_data.empty()){
+            continue;
+        }
+        size_t str_index = line_data.find_first_of(' ', 0);
+        std::string image_name_post = ine_data.substr(0, str_index);
+        str_index = image_name_post.find_first_of(' ', 0);
+        std::string image_name = ine_data.substr(0, str_index);
+        std::stringstream save_path;
+        std::stringstream image_path;
+        image_path << image_dir << image_name_post;
+        std::cout << image_path.str() << std::endl;
+        src_image = cv::imread(image_path.str());
+        time_start = get_current_time();
+        preprocess(&seg_ctx.nnctrl_ctx, src_image, dst_size, 1);
+        segment_run(&seg_ctx, seg_output);
+        postprocess(seg_output, 0, seg_mat);
+        time_end = get_current_time();
+        std::cout << "seg cost time: " <<  (time_end - time_start)/1000.0  << "ms" << std::endl;
 
-	cv::imwrite("result/result_00" + index.str() + ".jpg", src_img);
+        save_path << save_result_dir << image_name << ".png";
+        cv::imwrite(save_result_dir, seg_mat);
+    }
+    read_txt.close();
+    segment_deinit(&seg_ctx);
 }
 
 int main()
 {
     std::cout << "start..." << std::endl;
-
-    // Amba init 
-    int rval = 0;
-    mtcnn_ctx_t mtcnn_ctx;
-    
-    memset(&mtcnn_ctx, 0, sizeof(mtcnn_ctx_t));
-    rval = init_param(&mtcnn_ctx);
-    rval = mtcnn_init(&mtcnn_ctx);
-    std::cout << "1-----model init done!!!" << std::endl;
-
-    std::vector<std::string> images;
-	std::string test_images = "./test_images/";
-	std::cout << "Reading Test Images " << std::endl;
-	ListImages(test_images, images);
-	if (images.size() == 0) {
-		std::cerr << "\nError: No images exist in " << test_images << std::endl;
-	} else {
-		std::cout << "total Test images : " << images.size() << std::endl;
-	}
-
-	cv::Mat img;
-	unsigned long time_start, time_end;
-	for (unsigned int img_idx = 0; img_idx < images.size(); img_idx++) {
-		std::cout << test_images + images.at(img_idx) << std::endl;
-		img = cv::imread(test_images + images.at(img_idx));
-        time_start = get_current_time();
-        predict_segnet(&mtcnn_ctx, img, img_idx);
-        time_end = get_current_time();
-        std::cout << "classnet cost time: " <<  (time_end - time_start)/1000.0  << "ms" << std::endl;
-    }
-    mtcnn_deinit(&mtcnn_ctx);
-
+    const std::string image_dir = "";
+    const std::string image_txt_path = "";
+    image_txt_infer(image_dir, image_txt_path);
     std::cout << "End of game!!!" << std::endl;
-
     return 0;
 }

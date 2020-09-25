@@ -16,10 +16,7 @@
 #include <vector>
 #include <math.h>
 
-using namespace std;
-
-#define ROUND_UP_32(x) ((x)&0x1f ? (((x)&0xffffffe0) + 32) : (x))
-#define LAYER_P(w) (ROUND_UP_32(4 * w))/4
+#include "inference/common/utils.h"
 
 #define YOLO_NET_IN_HEIGHT 416
 #define YOLO_NET_IN_WIDTH 416
@@ -47,18 +44,18 @@ const int g_layer2_h = (YOLO_NET_IN_HEIGHT / 8);    //8)
 
 const int g_yolo_layer_channel = (g_anchorCnt *(g_classificationCnt+5));
 
-vector<vector<float>> yolo_run(float* node0, float* node1, float* node2, int img_h, int img_w);
+std::vector<std::vector<float>> yolo_run(float* node0, float* node1, float* node2, int img_h, int img_w);
 
 int entry_index(int loc, int anchorC, int w, int h, int lWidth, int lHeight);
 float sigmoid(float p);
 float overlap(float x1, float w1, float x2, float w2);
-float cal_iou(vector<float> box, vector<float>truth);
+float cal_iou(std::vector<float> box, std::vector<float>truth);
 
 //for amba version
-void detect(vector<vector<float>> &boxes, const float* lOutput, \
-			int lHeight, int lWidth, int num, \
-			int sHeight, int sWidth);
-vector<vector<float>> applyNMS(vector<vector<float>>& boxes,
-							const float thres, bool sign_nms=true);
+void detect(std::vector<std::vector<float>> &boxes, const float* lOutput, \
+			      int lHeight, int lWidth, int num, \
+			      int sHeight, int sWidth);
+std::vector<std::vector<float>> applyNMS(std::vector<std::vector<float>>& boxes,
+							                           const float thres, bool sign_nms=true);
 
 #endif  //__UTILS_H__

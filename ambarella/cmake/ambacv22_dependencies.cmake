@@ -1,7 +1,12 @@
 SET(AMBARELLA_DIR /home/lpj/Software/cv22_linux_sdk/ambarella)
 
 #fakeroot
-link_directories(${AMBARELLA_DIR}/out/cv22_walnut/fakeroot/usr/lib) 
+link_directories(${AMBARELLA_DIR}/out/cv22_walnut/fakeroot/usr/lib)
+
+#amba bsp
+include_directories(${AMBARELLA_DIR}/include)
+include_directories(${AMBARELLA_DIR}/include/arch_v5)
+include_directories(${AMBARELLA_PATH}/boards/cv22_walnut)
 
 #nnctrl
 include_directories(${AMBARELLA_DIR}/packages/nnctrl/inc)
@@ -21,13 +26,8 @@ link_directories(${AMBARELLA_DIR}/out/cv22_walnut/packages/smartfb)
 include_directories(${AMBARELLA_DIR}/packages/vproc/inc)
 link_directories(${AMBARELLA_DIR}/out/cv22_walnut/packages/vproc)
 
-#amba bsp
-include_directories(${AMBARELLA_DIR}/include)
-include_directories(${AMBARELLA_DIR}/include/arch_v5)
-include_directories(${AMBARELLA_PATH}/boards/cv22_walnut)
-
 #third-party
-ink_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/libjpeg-turbo/usr/lib)
+link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/libjpeg-turbo/usr/lib)
 link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/libpng/usr/lib)
 link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/zlib/usr/lib)
 link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/freetype/usr/lib)
@@ -36,9 +36,9 @@ link_directories(${AMBARELLA_DIR}/prebuild/third-party/armv8-a/freetype/usr/lib)
 set(OpenCV_DIR ${AMBARELLA_DIR}/prebuild/third-party/armv8-a/opencv/usr/lib/OpenCV)
 find_package(OpenCV REQUIRED CONFIG)
 message(STATUS "Found OpenCV ${OpenCV_VERSION}")
-message(STATUS "${OpenCV_INCLUDE_DIRS}, ${OpenCV_LIBRARIES}")
+message(STATUS "${OpenCV_INCLUDE_DIRS}, ${OpenCV_LIBS}")
 include_directories(${OpenCV_INCLUDE_DIRS})
-link_directories(${OpenCV_LIBRARIES})
+link_directories(${OpenCV_LIBS})
 
 OPTION(USE_OpenMP "Use OpenMP" ON)
 IF(USE_OpenMP)
