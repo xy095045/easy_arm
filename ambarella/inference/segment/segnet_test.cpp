@@ -34,7 +34,7 @@
 #define THRESH 0.3
 
 const static int g_canvas_id = 1;
-const static char *net_in_name = '0';
+const static char *net_in_name = "0";
 const static char *net_out_name = "507";
 
 typedef struct seg_ctx_s {
@@ -45,18 +45,17 @@ typedef struct seg_ctx_s {
 
 static void set_net_io(nnctrl_ctx_t *nnctrl_ctx){
 	nnctrl_ctx->net.net_in.in_num = 1;
-    strcpy(nnctrl_ctx->net.net_in.in_desc[0].name, net_in_name);
+    nnctrl_ctx->net.net_in.in_desc[0].name = net_in_name;
 	nnctrl_ctx->net.net_in.in_desc[0].no_mem = 0;
 
 	nnctrl_ctx->net.net_out.out_num = 1;
-    strcpy(nnctrl_ctx->net.net_out.out_desc[0].name, net_out_name); 
+    nnctrl_ctx->net.net_out.out_desc[0].name = net_out_name; 
 	nnctrl_ctx->net.net_out.out_desc[0].no_mem = 0; // let nnctrl lib allocate memory for output
 }
 
-static int init_param(mtcnn_ctx_t *mtcnn_ctx)
+static int init_param(nnctrl_ctx_t *nnctrl_ctx)
 {
     int rval = 0;
-    nnctrl_ctx_t *nnctrl_ctx = &mtcnn_ctx->nnctrl_ctx; 
     memset(nnctrl_ctx, 0, sizeof(nnctrl_ctx_t));
 
     nnctrl_ctx->verbose = 0;
@@ -65,7 +64,7 @@ static int init_param(mtcnn_ctx_t *mtcnn_ctx)
     nnctrl_ctx->buffer_id = g_canvas_id;
     nnctrl_ctx->log_level = 0;
 
-    strcpy(nnctrl_ctx->PNet[eSegNet].net_file, "./segnet.bin"); 
+    strcpy(nnctrl_ctx->net.net_file, "./segnet.bin"); 
 
     return rval;
 }
@@ -161,7 +160,7 @@ void postprocess(const float* output, const int flag, cv::Mat &seg_mat)
 }
 
 void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
-    const std::string save_result_dir = "./seg_result/"
+    const std::string save_result_dir = "./seg_result/";
     unsigned long time_start, time_end;
     seg_ctx_t seg_ctx;
     std::vector<std::vector<float>> boxes;
@@ -176,24 +175,24 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     }
     
     memset(&seg_ctx, 0, sizeof(seg_ctx_t));
-    init_param(&seg_ctx);
+    init_param(&seg_ctx.nnctrl_ctx);
     segment_init(&seg_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = seg_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = seg_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    int height = seg_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;
+    int width = seg_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.width;
     // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
     cv::Size dst_size = cv::Size(width, height);
     float seg_output[SegOutputHeight * 504];
     cv::Mat seg_mat(SegOutputHeight, SegOutputWidth, CV_8UC3);
-    while(std::getline(infile, line_data)){
+    while(std::getline(read_txt, line_data)){
         boxes.clear();
         if(line_data.empty()){
             continue;
         }
         size_t str_index = line_data.find_first_of(' ', 0);
-        std::string image_name_post = ine_data.substr(0, str_index);
+        std::string image_name_post = line_data.substr(0, str_index);
         str_index = image_name_post.find_first_of(' ', 0);
-        std::string image_name = ine_data.substr(0, str_index);
+        std::string image_name = line_data.substr(0, str_index);
         std::stringstream save_path;
         std::stringstream image_path;
         image_path << image_dir << image_name_post;

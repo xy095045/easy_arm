@@ -25,17 +25,18 @@
 #include "inference/common/utils.h"
 #include "inference/common/vproc_process.h"
 #include "inference/common/net_process.h"
+#include "inference/common/image_process.h"
 
 #include "inference/detection2d/yolov3.h"
 
 #define OUTPUT_NUM (3)
 
 const static int g_canvas_id = 1;
-const char *net_in_name = "data";
-const char *net_out_name_1 = "636";
-const char *net_out_name_2 = "662";
-const char *net_out_name_3 = "688";
-const char class_name[4][] = {"orange", "apple", "pear", "potato"}
+const char* net_in_name = "data";
+const char* net_out_name_1 = "636";
+const char* net_out_name_2 = "662";
+const char* net_out_name_3 = "688";
+const char* class_name[4] = {"orange", "apple", "pear", "potato"};
 
 typedef struct det2d_ctx_s {
     cavalry_ctx_t cavalry_ctx;
@@ -58,10 +59,9 @@ static void set_net_io(nnctrl_ctx_t *nnctrl_ctx)
 	nnctrl_ctx->net.net_out.out_desc[2].no_mem = 0; // let nnctrl lib allocate memory for output
 }
 
-static int init_param(mtcnn_ctx_t *mtcnn_ctx)
+static int init_param(nnctrl_ctx_t *nnctrl_ctx)
 {
     int rval = 0;
-    nnctrl_ctx_t *nnctrl_ctx = &mtcnn_ctx->nnctrl_ctx; 
     memset(nnctrl_ctx, 0, sizeof(nnctrl_ctx_t));
 
     nnctrl_ctx->verbose = 0;
@@ -70,7 +70,7 @@ static int init_param(mtcnn_ctx_t *mtcnn_ctx)
     nnctrl_ctx->buffer_id = g_canvas_id;
     nnctrl_ctx->log_level = 0;
 
-    strcpy(nnctrl_ctx->PNet[eDetNet].net_file, "./detnet.bin"); 
+    strcpy(nnctrl_ctx->net.net_file, "./detnet.bin"); 
 
     return rval;
 }
@@ -94,7 +94,7 @@ static int det2d_init(det2d_ctx_t *det2d_ctx)
     return rval;
 }
 
-static void classnet_deinit(det2d_ctx_t *det2d_ctx)
+static void det2d_deinit(det2d_ctx_t *det2d_ctx)
 {
     deinit_net_context(&det2d_ctx->nnctrl_ctx, &det2d_ctx->cavalry_ctx);
     DPRINT_NOTICE("det2d_deinit\n");
@@ -117,7 +117,7 @@ int det2d_run(det2d_ctx_t *det2d_ctx, float *output[OUTPUT_NUM])
         cavalry_sync_cache(nnctrl_ctx->net.net_m.mem_size, nnctrl_ctx->net.net_m.phy_addr, 0, 1);
     }
     
-    for (int i = 0; i < layer_output_num; i++)
+    for (int i = 0; i < OUTPUT_NUM; i++)
 	{
         float *score_addr = (float *)(nnctrl_ctx->net.net_m.virt_addr
                             + nnctrl_ctx->net.net_out.out_desc[i].addr - nnctrl_ctx->net.net_m.phy_addr);
@@ -134,10 +134,8 @@ int det2d_run(det2d_ctx_t *det2d_ctx, float *output[OUTPUT_NUM])
     return rval;
 }
 
-std::vector<std::vector<float>> postprocess(det2d_ctx_t *det2d_ctx, const cv::Size dst_size, float *output[OUTPUT_NUM])
+std::vector<std::vector<float>> postprocess(const cv::Size dst_size, float *output[OUTPUT_NUM])
 {
-    nnctrl_ctx_t *nnctrl_ctx = &det2d_ctx->nnctrl_ctx;
-
     int img_h = dst_size.height;
     int img_w = dst_size.width;
 
@@ -164,21 +162,22 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     }
     
     memset(&det2d_ctx, 0, sizeof(det2d_ctx_t));
-    init_param(&det2d_ctx);
+    init_param(&det2d_ctx.nnctrl_ctx);
     det2d_init(&det2d_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
-    int height = det2d_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.height;
-    int width = det2d_ctx.nnctrl_ctx->net.net_in.in_desc[0].dim.width;
+    int height = det2d_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;
+    int width = det2d_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.width;
     // std::cout << "--channel: " << channel << "--height: " << height << "--width: " << width << "--" << std::endl;
     cv::Size dst_size = cv::Size(width, height);
     save_result.open("./det2d_result.txt");
-    while(std::getline(infile, line_data)){
+    while(std::getline(read_txt, line_data)){
+        float *output[OUTPUT_NUM];
         boxes.clear();
         if(line_data.empty()){
             continue;
         }
         size_t index = line_data.find_first_of(' ', 0);
-        std::string image_name = ine_data.substr(0, index);
+        std::string image_name = line_data.substr(0, index);
         std::stringstream image_path;
         image_path << image_dir << image_name;
         std::cout << image_path.str() << std::endl;
@@ -186,7 +185,7 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
         time_start = get_current_time();
         preprocess(&det2d_ctx.nnctrl_ctx, src_image, dst_size, 1);
         det2d_run(&det2d_ctx, output);
-        boxes = postprocess(output, src_image);
+        boxes = postprocess(dst_size, output);
         time_end = get_current_time();
         std::cout << "det2d cost time: " <<  (time_end - time_start)/1000.0  << "ms" << std::endl;
 

@@ -52,10 +52,9 @@ static void set_net_io(nnctrl_ctx_t *nnctrl_ctx){
 	nnctrl_ctx->net.net_out.out_desc[0].no_mem = 0; // let nnctrl lib allocate memory for output
 }
 
-static int init_param(classnet_ctx_s *classify_ctx)
+static int init_param(nnctrl_ctx_t *nnctrl_ctx)
 {
     int rval = 0;
-    nnctrl_ctx_t *nnctrl_ctx = &classify_ctx->nnctrl_ctx; 
     memset(nnctrl_ctx, 0, sizeof(nnctrl_ctx_t));
 
     nnctrl_ctx->verbose = 0;
@@ -94,7 +93,7 @@ static void classnet_deinit(classnet_ctx_s *classify_ctx)
     DPRINT_NOTICE("mtcnn_deinit\n");
 }
 
-int classnet_run(classnet_ctx_s *classify_ctx, float *output)
+static int classnet_run(classnet_ctx_s *classify_ctx, float *output)
 {
     int rval = 0;
     nnctrl_ctx_t *nnctrl_ctx = &classify_ctx->nnctrl_ctx;
@@ -120,7 +119,7 @@ int classnet_run(classnet_ctx_s *classify_ctx, float *output)
     return rval;
 }
 
-int postprocess(const float *output)
+static int postprocess(const float *output)
 {
     float id_max = -100;
     int class_idx = 0;
@@ -133,7 +132,7 @@ int postprocess(const float *output)
     return class_idx;
 }
 
-void image_dir_infer(const std::string &image_dir){
+static void image_dir_infer(const std::string &image_dir){
     unsigned long time_start, time_end;
     classnet_ctx_s classify_ctx;
     std::vector<std::string> images;
@@ -141,7 +140,7 @@ void image_dir_infer(const std::string &image_dir){
     float output[CLASS_NUM];
     int class_idx = -1;
     memset(&classify_ctx, 0, sizeof(classnet_ctx_s));
-    init_param(&classify_ctx);
+    init_param(&classify_ctx.nnctrl_ctx);
     classnet_init(&classify_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
     int height = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;
@@ -170,7 +169,7 @@ void image_dir_infer(const std::string &image_dir){
     classnet_deinit(&classify_ctx);
 }
 
-void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
+static void image_txt_infer(const std::string &image_dir, const std::string &image_txt_path){
     unsigned long time_start, time_end;
     classnet_ctx_s classify_ctx;
     std::ofstream save_result;
@@ -187,7 +186,7 @@ void image_txt_infer(const std::string &image_dir, const std::string &image_txt_
     }
     
     memset(&classify_ctx, 0, sizeof(classnet_ctx_s));
-    init_param(&classify_ctx);
+    init_param(&classify_ctx.nnctrl_ctx);
     classnet_init(&classify_ctx);
     // int channel = nnctrl_ctx->PNet[netId].net_in.in_desc[0].dim.depth;
     int height = classify_ctx.nnctrl_ctx.net.net_in.in_desc[0].dim.height;

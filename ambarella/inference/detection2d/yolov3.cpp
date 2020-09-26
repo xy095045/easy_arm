@@ -19,8 +19,8 @@ float sigmoid(float p)
 
 float overlap(float x1, float w1, float x2, float w2)
 {
-    float left = max(x1 - w1 / 2.0f, x2 - w2 / 2.0f);
-    float right = min(x1 + w1 / 2.0f, x2 + w2 / 2.0f);
+    float left = std::max(x1 - w1 / 2.0f, x2 - w2 / 2.0f);
+    float right = std::min(x1 + w1 / 2.0f, x2 + w2 / 2.0f);
     return right - left;
 }
 
